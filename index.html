@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5c518">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Axle ID">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Axle ID</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: one phone-width column, a counter tool read top to bottom: photo, numbers, picks, result. */
+:root{
+  --bg:#eef0f2; --surface:#ffffff; --ink:#16212b; --muted:#566574; --line:#cfd6dc; --chip:#e2e7eb;
+  --tape:#f5c518; --tape-ink:#1a1a10; --steel:#2a5878;
+  --good:#1f7a4d; --warn:#8a5a00; --bad:#b3261e;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11181e; --surface:#1a242c; --ink:#e8edf1; --muted:#9aa9b6; --line:#2e3b46; --chip:#24313b;
+  --tape:#f5c518; --tape-ink:#1a1a10; --steel:#7fb4d6;
+  --good:#5fc891; --warn:#f0b34a; --bad:#ff8a80; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#11181e; --surface:#1a242c; --ink:#e8edf1; --muted:#9aa9b6; --line:#2e3b46; --chip:#24313b;
+  --tape:#f5c518; --tape-ink:#1a1a10; --steel:#7fb4d6;
+  --good:#5fc891; --warn:#f0b34a; --bad:#ff8a80; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+.wrap{max-width:600px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+p{margin:0}
+a{color:var(--steel)}
+:focus-visible{outline:3px solid var(--steel);outline-offset:2px}
+
+.top{background:var(--surface)}
+.top .wrap{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:14px 10px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-size:30px;line-height:1;text-transform:uppercase}
+.brand span{color:var(--muted);font-size:13px}
+.tape{height:12px;background:repeating-linear-gradient(90deg,var(--tape-ink) 0 1.5px,transparent 1.5px 60px),repeating-linear-gradient(90deg,var(--tape-ink) 0 1px,transparent 1px 12px) 0 0/100% 6px no-repeat,var(--tape)}
+nav{display:flex;gap:4px}
+nav a{font-family:var(--display);font-weight:600;font-size:18px;text-transform:uppercase;letter-spacing:.04em;text-decoration:none;color:var(--muted);padding:6px 10px;border-radius:6px}
+nav a[aria-current="page"]{color:var(--tape-ink);background:var(--tape)}
+
+main{padding-block:18px 48px;display:flex;flex-direction:column;gap:18px}
+.view{display:flex;flex-direction:column;gap:18px}
+.step{display:flex;flex-direction:column;gap:12px}
+.step>h2{font-size:22px;text-transform:uppercase;display:flex;align-items:baseline;gap:8px}
+.step>h2 b{font-size:15px;color:var(--tape-ink);background:var(--tape);border-radius:4px;padding:0 7px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.note{color:var(--muted);font-size:14px}
+.banner{background:var(--chip);border-left:4px solid var(--tape);padding:10px 12px;border-radius:4px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+
+button,.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:10px 14px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center}
+button.primary,.btn.primary{background:var(--tape);color:var(--tape-ink);border-color:var(--tape)}
+button.danger{color:var(--bad);border-color:var(--bad)}
+button.small{min-height:36px;padding:6px 10px;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>.grow{flex:1 1 160px;min-width:0}
+
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+select,.tool input[type=number]{flex:1 1 160px}
+input[type=text],input[type=number],select{font:inherit;font-size:18px;font-variant-numeric:tabular-nums;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px;width:100%}
+label.f small{font-weight:400}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{min-height:40px;padding:6px 12px;background:var(--chip);border-color:transparent;font-weight:500;font-variant-numeric:tabular-nums}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.pick{display:flex;flex-direction:column;gap:6px}
+.pick>span{font-size:13px;font-weight:600;color:var(--muted)}
+
+.tool .stage{position:relative;background:var(--chip);border-radius:8px;overflow:hidden;display:flex;justify-content:center}
+.tool canvas.main{display:block;touch-action:none;max-width:100%}
+.tool canvas.loupe{position:absolute;top:8px;left:8px;width:132px;height:132px;border-radius:50%;border:3px solid var(--tape);background:var(--surface);pointer-events:none}
+.tool canvas.loupe.right{left:auto;right:8px}
+.tool .pairs button i{width:12px;height:12px;border-radius:50%;display:inline-block;border:1.5px solid var(--ink)}
+.tool .read{font-variant-numeric:tabular-nums;font-size:15px;display:flex;flex-direction:column;gap:2px}
+.filebtn{position:relative;overflow:hidden}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+svg.diagram{width:100%;height:auto;display:block}
+svg.diagram text{font-family:var(--body);font-size:19px;font-weight:500;fill:var(--ink)}
+
+.result .cap{font-family:var(--display);font-weight:700;font-size:40px;line-height:1.05}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;border:1.5px solid currentColor;border-radius:999px;padding:2px 10px}
+.pill.high{color:var(--good)} .pill.medium{color:var(--warn)} .pill.low{color:var(--bad)}
+ul.why{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+ul.why li.no{color:var(--bad)}
+dl.parts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:15px}
+dl.parts dt{color:var(--muted)} dl.parts dd{margin:0;font-variant-numeric:tabular-nums;min-width:0}
+.spec{background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:10px;font-size:15px;user-select:all}
+.sup{display:flex;flex-direction:column}
+.sup>div{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.sup strong{display:block} .sup span{color:var(--muted);font-size:14px}
+.sup .txt{flex:1 1 200px;min-width:0}
+
+.panel>h3{font-size:20px}
+.part{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.part h4{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.1;margin:0}
+#catalog{gap:0}
+details{border-top:1px solid var(--line);padding:10px 0}
+details:first-child{border-top:0}
+summary{cursor:pointer;font-weight:600}
+details .tablewrap,details .note{margin-top:8px}
+.rec{display:flex;flex-direction:column;gap:8px}
+.rec h3{font-size:20px} .rec .meta{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;min-width:560px;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+@media (prefers-reduced-motion: no-preference){ button{transition:background .12s} }
+</style>
+
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Axle ID</h1><span>trailer axles · prototype</span></div>
+    <nav aria-label="Sections">
+      <a href="#scan" data-nav="scan">Scan</a>
+      <a href="#records" data-nav="records">Records</a>
+      <a href="#chart" data-nav="chart">Catalog</a>
+    </nav>
+  </div>
+  <div class="tape" aria-hidden="true"></div>
+</header>
+
+<main class="wrap">
+<div class="view" id="view-scan">
+  <div class="banner" id="exampleBanner">
+    <span>An example axle is loaded so you can see a result. These are not your numbers.</span>
+    <button class="small" id="btnNew" type="button">Start a new scan</button>
+  </div>
+
+  <section class="step">
+    <h2><b>1</b> Photograph and measure</h2>
+    <div class="panel">
+      <svg class="diagram" viewBox="0 0 560 170" role="img" aria-label="Hub face runs from the outside of one hub to the outside of the other. Spring center runs from the middle of one spring seat to the middle of the other.">
+        <rect x="70" y="72" width="420" height="16" rx="8" fill="var(--muted)"/>
+        <rect x="40" y="48" width="30" height="64" rx="5" fill="var(--ink)"/>
+        <rect x="490" y="48" width="30" height="64" rx="5" fill="var(--ink)"/>
+        <rect x="128" y="62" width="34" height="10" fill="var(--steel)"/>
+        <rect x="398" y="62" width="34" height="10" fill="var(--steel)"/>
+        <g stroke="var(--ink)" stroke-width="1.5" fill="none">
+          <path d="M40 42V26M520 42V26M40 32H520"/>
+          <path d="M145 118v22M415 118v22M145 134H415"/>
+        </g>
+        <text x="280" y="20" text-anchor="middle">Hub face (outside of hub to outside of hub)</text>
+        <text x="280" y="160" text-anchor="middle">Spring center (middle of seat to middle of seat)</text>
+      </svg>
+      <p class="note">Lay the axle flat in good light. Put the reference on the axle, shoot square-on from the middle, and keep the whole axle in frame. A longer reference gives a tighter number on the long measurements.</p>
+      <p class="note" id="cardLink" hidden><a href="axle-id-reference-card.pdf" target="_blank" rel="noopener">Open the printable reference card</a> (print at 100%).</p>
+    </div>
+    <div class="panel tool" id="toolWide"></div>
+    <div class="panel tool" id="toolTube"></div>
+  </section>
+
+  <section class="step">
+    <h2><b>2</b> Check the numbers</h2>
+    <div class="panel">
+      <div class="fields">
+        <label class="f" for="inHF">Hub face (in)<input id="inHF" type="text" inputmode="text" autocomplete="off" placeholder="89"></label>
+        <label class="f" for="inSC"><span id="lblSC">Spring center (in)</span><input id="inSC" type="text" inputmode="text" autocomplete="off" placeholder="74"></label>
+        <label class="f" for="inTube">Tube size (in)<input id="inTube" type="text" inputmode="text" autocomplete="off" placeholder="2 3/8"></label>
+      </div>
+      <p class="note">Type over anything the photo got wrong. Fractions work: 89 1/4, 2-3/8 or 2.375. Confirm with a tape before ordering.</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2><b>3</b> What you see</h2>
+    <div class="panel" id="picks"></div>
+  </section>
+
+  <section class="step">
+    <h2><b>4</b> Result</h2>
+    <div class="panel result" id="result"></div>
+    <div class="panel" id="parts"></div>
+    <div class="panel" id="suppliers"></div>
+  </section>
+
+  <section class="step">
+    <h2><b>5</b> Save</h2>
+    <div class="panel">
+      <label class="f" for="inLabel">Label<input id="inLabel" type="text" autocomplete="off" placeholder="Customer or job, e.g. boat trailer, rear axle"></label>
+      <label class="f" for="inNotes">Notes<input id="inNotes" type="text" autocomplete="off" placeholder="Tag numbers, condition, anything odd"></label>
+      <div class="row">
+        <button class="primary grow" id="btnSave" type="button">Save record</button>
+        <span class="note" id="saveMsg" role="status"></span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="view" id="view-records" hidden>
+  <section class="step">
+    <h2>Saved axles</h2>
+    <p class="note" id="storeMsg"></p>
+    <div class="row" id="exportRow" hidden><button class="small" id="btnExport" type="button">Export records (CSV)</button></div>
+    <div id="recList" class="view"></div>
+  </section>
+</div>
+
+<div class="view" id="view-chart" hidden>
+  <section class="step">
+    <h2>Capacity chart</h2>
+    <p class="note">Starter data for round-tube leaf spring axles, from published etrailer, Dexter and Lippert information. Typical values only: tubes, hubs and brakes get swapped over a trailer's life, so treat a match as a strong lead and confirm with the tag or bearing numbers.</p>
+    <div class="panel"><div class="tablewrap"><table id="chart"></table></div></div>
+  </section>
+  <section class="step">
+    <h2>Parts catalog</h2>
+    <p class="note">Part numbers the app can match. Loaded so far: Franklin Trailer Parts (pages 4 to 11) and R.H. Scales (pages 2 and 3). No prices are stored. Tap a group to check it against the printed catalog.</p>
+    <div class="panel" id="catalog"></div>
+  </section>
+</div>
+</main>
+
+<script>
+window.AXLE_STANDALONE=true;
+/*LOGIC-START*/
+const CLASSES=[
+ {id:'2k',label:'2,000 lb',range:'1,000 to 2,200 lb',tube:[1.5,1.75],tubeTxt:'1-1/2" to 1-3/4"',lugs:['4on4','5on4.5'],lugsAlt:[],drum:7,brake:'7" x 1-1/4"',bearings:'L44649 (1-1/16" spindle) or L44643 (1" spindle)',flange:'Often none (idler)',dexter:'D20 leaf spring, #9 Torflex',q:'2000 lbs'},
+ {id:'3.5k',label:'3,500 lb',range:'2,300 to 4,000 lb',tube:[2.375],tubeTxt:'2-3/8"',lugs:['5on4.5','5on4.75','5on5','6on5.5'],lugsAlt:['5on5.5'],drum:10,brake:'10" x 2-1/4"',bearings:'L68149 inner, L44649 outer',flange:'4-bolt',dexter:'D35 leaf spring, #10 Torflex',q:'3500 lbs'},
+ {id:'4.4k',label:'4,400 lb',range:'4,400 lb',tube:[2.375],tubeTxt:'2-3/8" (heavier wall)',lugs:['6on5.5'],lugsAlt:[],drum:10,brake:'10" x 2-1/4"',bearings:'L68149 and LM67048',flange:'4-bolt',dexter:'D44 leaf spring, #11 Torflex',q:'4400 lbs'},
+ {id:'5.2k',label:'5,200 lb',range:'5,200 lb',tube:[3],tubeTxt:'3"',lugs:['6on5.5'],lugsAlt:['8on6.5'],drum:12,brake:'12" x 2"',bearings:'25580 inner, LM67048 outer',flange:'5-bolt',dexter:'D52 leaf spring, #11 Torflex',q:'5200 lbs'},
+ {id:'6k',label:'6,000 lb',range:'6,000 lb',tube:[3],tubeTxt:'3"',lugs:['6on5.5'],lugsAlt:['8on6.5'],drum:12,brake:'12" x 2"',bearings:'25580 inner, 15123 outer',flange:'5-bolt',dexter:'D60 leaf spring, #11 Torflex',q:'6000 lbs'},
+ {id:'7k',label:'7,000 lb',range:'7,000 lb',tube:[3],tubeTxt:'3"',lugs:['8on6.5'],lugsAlt:[],drum:12,brake:'12" x 2"',bearings:'25580 inner, 14125A outer',flange:'5-bolt',dexter:'D70 leaf spring, #12 Torflex',q:'7000 lbs'},
+ {id:'8k',label:'8,000 lb',range:'8,000 lb',tube:[3.5],tubeTxt:'3-1/2"',lugs:['8on6.5'],lugsAlt:[],drum:12.25,brake:'12-1/4" x 3-3/8"',bearings:'25580 inner; confirm outer from the hub',flange:'Confirm on the axle',dexter:'D80 leaf spring, #13 Torflex',q:'8000 lbs'},
+ {id:'9k',label:'9,000 lb and up',range:'9,000 lb and up',tube:[4,5],tubeTxt:'4" (9K), 5" (10K and up)',lugs:['8on6.5'],lugsAlt:[],drum:12.25,brake:'Medium duty; confirm',bearings:'Medium duty; confirm from the hub',flange:'Confirm on the axle',dexter:'D90 and up (medium duty catalog)',q:'9000 lbs'}
+];
+const LUGS=[['4on4','4 on 4'],['5on4.5','5 on 4-1/2'],['5on4.75','5 on 4-3/4'],['5on5','5 on 5'],['5on5.5','5 on 5-1/2'],['6on5.5','6 on 5-1/2'],['8on6.5','8 on 6-1/2']];
+const lugTxt=k=>(LUGS.find(l=>l[0]===k)||[,''])[1];
+function gcd(a,b){return b?gcd(b,a%b):a}
+function fmtIn(x,den){
+  if(x==null||!isFinite(x))return '';
+  den=den||16; let w=Math.floor(x), n=Math.round((x-w)*den);
+  if(n===den){w+=1;n=0}
+  if(!n)return String(w);
+  const g=gcd(n,den); return (w?w+'-':'')+(n/g)+'/'+(den/g);
+}
+function parseIn(s){
+  if(s==null)return null;
+  s=String(s).replace(/["”″]|in(ch(es)?)?\.?/gi,'').trim();
+  if(!s)return null;
+  let m=s.match(/^(\d+(?:\.\d+)?)(?:[\s-]+(\d+)\s*\/\s*(\d+))?$/);
+  if(m){const v=parseFloat(m[1])+(m[2]?(+m[2])/(+m[3]):0);return isFinite(v)&&v>0?v:null}
+  m=s.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if(m&&+m[2]){return (+m[1])/(+m[2])}
+  return null;
+}
+function identify(inp){
+  const useTube=inp.tube!=null&&inp.susp!=='torsion'&&inp.shape!=='square';
+  const n=(useTube?1:0)+(inp.lugs?1:0)+(inp.drum?1:0);
+  if(!n)return {status:'none'};
+  const rows=CLASSES.map(c=>{
+    let s=0;const why=[];
+    if(useTube){const d=Math.min(...c.tube.map(t=>Math.abs(t-inp.tube)));
+      if(d<=0.19){s+=3;why.push([true,'Tube '+fmtIn(inp.tube,16)+'" fits the usual '+c.tubeTxt+' tube'])}
+      else if(d<=0.35){s+=1;why.push([true,'Tube '+fmtIn(inp.tube,16)+'" is close to the usual '+c.tubeTxt+' tube'])}
+      else{s-=3;why.push([false,'Tube '+fmtIn(inp.tube,16)+'" does not fit the usual '+c.tubeTxt+' tube'])}}
+    if(inp.lugs){
+      if(c.lugs.includes(inp.lugs)){s+=2;why.push([true,lugTxt(inp.lugs)+' hubs are standard here'])}
+      else if(c.lugsAlt.includes(inp.lugs)){s+=1;why.push([true,lugTxt(inp.lugs)+' hubs also fit this class'])}
+      else{s-=2;why.push([false,lugTxt(inp.lugs)+' hubs are unusual for this class'])}}
+    if(inp.drum){
+      if(c.drum===inp.drum){s+=2;why.push([true,'Brake size matches ('+c.brake+')'])}
+      else{s-=2;why.push([false,'Brake size does not match the usual '+c.brake])}}
+    return {c,s,why};
+  }).sort((a,b)=>b.s-a.s);
+  const top=rows[0].s, cands=rows.filter(r=>r.s===top);
+  const conflict=cands[0].why.some(w=>!w[0]);
+  const runner=rows.find(r=>r.s<top);
+  let conf;
+  if(conflict)conf='low';
+  else if(n>=2&&cands.length===1&&(!runner||top-runner.s>1))conf='high';
+  else if(cands.length<=2)conf='medium';
+  else conf='low';
+  return {status:'ok',cands:cands.map(r=>r.c),why:cands[0].why,conf,conflict,n};
+}
+/*LOGIC-END*/
+/*PARTS-START*/
+/* Franklin Trailer Parts catalog pages 4-11, then R.H. Scales catalog pages 2-3. Specs and part numbers only, no prices.
+   rows: [part, hub face, overall length, spring center low, high, flange to flange, extras] */
+const PART_FAMS=[
+ {sup:'Franklin',page:4,fam:'1-3/4" painted round, 1" non-lube spindle',shape:'round',tube:1.75,cap:2000,drop:0,spindle:'1" non-lube',bearings:'',hub:'15513B with 13" tires',note:'Not for 14" or 15" tires.',rows:[
+  ['53A',49,53.5,33,39,null,{note:'Not for 14" or 15" tires. No camber.'}],['55A',51,55.5,35,41,null,{note:'Not for 14" or 15" tires. No camber.'}],['57A',53,57.5,37,43,null,{note:'Not for 14" or 15" tires. No camber.'}],
+  ['60A',56,60.5,40,46],['62A',58,62.5,42,48],['63A',59,63.5,43,49],['65A',61,65.5,45,51],['67A',63,67.5,47,53],['69A',65,69.5,49,55],['71A',67,71.5,51,57],['73A',69,73.5,53,59],['75A',71,75.5,55,61],['76A',72,76.5,56,62],['78A',74,78.5,58,64]]},
+ {sup:'Franklin',page:4,fam:'1-3/4" painted round, 1-1/16" lube spindle',shape:'round',tube:1.75,cap:2200,drop:0,spindle:'1-1/16" lube',bearings:'',hub:'15613B with 13" tires',note:'Not for 14" or 15" tires.',rows:[
+  ['F1663A',58,63,42,48],['F1665A',60,65,44,50],['F1670A',65,70,49,55],['F1676A',71,76,55,61]]},
+ {sup:'Franklin',page:5,fam:'1-1/2" square galvanized',shape:'square',tube:1.5,cap:2000,drop:0,spindle:'1-1/16"',bearings:'44649',hub:'',note:'Not for tires larger than 12".',rows:[
+  ['54GA',49.25,54,38.5,38.5],['56GA',51.25,56,38.5,38.5],['58GA',53.25,58,42.25,42.25],['61GA',56.75,61,45,45],['62GA',57.5,62,46.5,46.5,null,{spindle:'1"',bearings:'44643'}],['664GA',59.5,64,46.5,46.5],['66GA',61.75,66,50,50],['72GA',68.75,73,58,58]]},
+ {sup:'Franklin',page:6,fam:'2" x 2" square galvanized, lube spindle',shape:'square',tube:2,cap:2000,drop:0,spindle:'1-1/16" lube',bearings:'44649',hub:'15613B with 13" tires',note:'Not for 14" or 15" tires. Ends cambered.',rows:[
+  ['F54G',49,53.5,34,39],['F56G',51,55.5,36,41],['F58G',53,57.75,38,43],['F60G',55,60,40,45],['F62G',57,62,42,47],['F64G',59,63.75,44,49],['F66G',61,66,46,51],['F68G',63,68,48,53],['F70G',65,70,50,55],['F74G',69,73.5,54,59],['F78G',71,75.5,56,61],['F80G',75,80,60,65],['F90G',85,89.5,70,75],['F92G',87,91.5,72,77],['F94G',89,94,74,79],['F96G',91,96,76,81]]},
+ {sup:'Franklin',page:7,fam:'2" x 2" square galvanized, lube spindle',shape:'square',tube:2,cap:3500,drop:0,spindle:'lube',bearings:'68149 inner (1-3/8"), 44649 outer (1-1/16")',hub:'5452 hub or F545D drum; seal GS6 or GS63',note:'Ends cambered.',rows:[
+  ['F3576G',71.25,76,56.75,59.75,65],['F3578G',73.25,78,57.75,61.75,67],['F3580G',75.25,80,59.75,63.75,69],
+  ['F3584G',79.25,84,63.75,67.75,73,{note:'Ends cambered. 1/4" wall.'}],['F3586G',81.25,86,65.75,69.75,75.25,{note:'Ends cambered. 1/4" wall.'}],['F3590G',85.25,89.75,69.75,73.75,79,{note:'Ends cambered. 1/4" wall.'}],['F3592G',87.25,92,71.75,75.75,81,{note:'Ends cambered. 1/4" wall.'}],['F3596G',91.25,96,75.75,79.75,85,{note:'Ends cambered. 1/4" wall.'}],['F3598G',93.5,98.25,81.25,81.25,87.25,{note:'Ends cambered. 1/4" wall. Spring center listed for springs under.'}]]},
+ {sup:'Franklin',page:8,fam:'2" x 2" galvanized, 2" drop',shape:'square',tube:2,cap:3500,drop:2,spindle:'',bearings:'68149 inner (1-3/8"), 44649 outer (1-1/16")',hub:'5452, 655X or 545D; seal GS6 or GS63',note:'Fits Load Rite, EZ-Loader, Sealion and others.',rows:[
+  ['35292A',87.5,92,70,70,81.25]]},
+ {sup:'Franklin',page:8,fam:'2" x 3" galvanized, 2" drop',shape:'square',tube:[2,3],cap:5200,drop:2,spindle:'',bearings:'25580 inner (1-3/4"), 15123 outer (1-1/4")',hub:'655RX or 65512D; seal GS15',note:'',rows:[
+  ['52294A',87.75,93.25,70,70,79]]},
+ {sup:'Franklin',page:9,fam:'2-3/8" round, straight, lube spindle',shape:'round',tube:2.375,cap:3500,drop:0,spindle:'lube',bearings:'68149 inner (1-3/8"), 44649 outer (1-1/16")',hub:'545 / 545D',note:'Cambered. Spring seats shipped loose.',rows:[
+  ['3566A',61,65.5,42,49,54.75],['3570A',65,69.5,46,52,58.25],['3574A',69,73.5,50,56,62.75],['3575A',70,74.5,51,58,63.75],['3578A',73,77.5,54,60,67],['3580A',75,79.5,56,62,68.75],['3590A',85,90,66,72,79],['3592A',87,92,68,74,81],['3593A',88,93,69,75,81.75],
+  ['3594A',89,93.5,70,76,82.75,{kits:'350AKS (no brakes), 352ELS (electric brakes), 74ELS (7,000 lb tandem, electric brakes); 5 on 4-1/2'}],['3597A',93,98,74,80,87],['3599A',94.75,99.25,76,82,88.5]]},
+ {sup:'Franklin',page:9,fam:'2-3/8" round, 4" drop, lube spindle',shape:'round',tube:2.375,cap:3500,drop:4,spindle:'lube',bearings:'68149 inner (1-3/8"), 44649 outer (1-1/16")',hub:'545 / 545D',note:'Cambered. Spring seats shipped loose.',rows:[
+  ['35470A',65.25,70,46,50,59],['35480A',75,79.5,56,60,68.75],['35490A',85,90,66,70,78.75],
+  ['35494A',89,93.5,70,74,82.75,{kits:'350AK (no brakes), 352EL (electric brakes), 74EL (7,000 lb tandem, electric brakes); 5 on 4-1/2'}],['35496A',91,96,72,76,85],['35410A',95,99.5,76,80,88.25]]},
+ {sup:'Franklin',page:10,fam:'3" round, straight, lube spindle',shape:'round',tube:3,cap:6000,drop:0,spindle:'lube',bearings:'25580 inner (1-3/4"), 15123 outer (1-1/4")',hub:'655RX or 65512D',note:'Cambered. Spring seats shipped loose.',rows:[
+  ['6080A',74.75,80.5,57,62,66.25],['6084A',79,84.5,60,64,70.25],['6090A',85,90.5,66,70,76.25,{hub:'865D (as printed in the catalog)'}],
+  ['6094A',89,94.5,70,74,80.5,{kits:'87EL (5-bolt rim clamp drums), 87EL6 (6-bolt), 87EL8 (8-bolt): 12,000 lb tandem, electric brakes'}],['6010A',94.75,100,76,80,86.25]]},
+ {sup:'Franklin',page:10,fam:'3" round, straight, lube spindle',shape:'round',tube:3,cap:7000,drop:0,spindle:'lube',bearings:'25580 inner (1-3/4"), 15123 outer (1-1/4")',hub:'865D drum',note:'Cambered. Spring seats shipped loose.',rows:[
+  ['7080A',74.75,80.5,57,60,66.25],['7084A',79,84.5,60,64,70.25],['7090A',85,90.5,66,70,76.25],['7094A',89,94.5,70,74,80.5],['7098A',93,98,75,79.5,84.25],['7010A',94.75,100,76,80,86.25]]},
+ {sup:'Franklin',page:10,fam:'3" round, 4" drop, lube spindle',shape:'round',tube:3,cap:6000,drop:4,spindle:'lube',bearings:'25580 inner (1-3/4"), 15123 outer (1-1/4")',hub:'655RX or 65512D',note:'Cambered. Spring seats shipped loose.',rows:[
+  ['46094A',89.5,95.5,70,72,80.75,{kits:'88EL (5-bolt rim clamp drums), 88EL6 (6-bolt), 88EL8 (8-bolt): 12,000 lb tandem, electric brakes'}],['46100A',94.25,100.5,75.25,76.5,85.5]]},
+ {sup:'Franklin',page:10,fam:'3" round, 4" drop, lube spindle',shape:'round',tube:3,cap:7000,drop:4,spindle:'lube',bearings:'25580 inner (1-3/4"), 15123 outer (1-1/4")',hub:'865D drum',note:'Cambered. Spring seats shipped loose.',rows:[
+  ['47094A',89.5,95.5,70.5,72,80.75],['47100A',94.25,100.5,75.25,76.5,85.5]]},
+ /* R.H. Scales catalog, pages 2-3 */
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:0,bearings:"",hub:"",fam:"1-3/4\" round tube, 1\" straight spindle",shape:"round",tube:1.75,cap:2000,spindle:"1\" straight",note:"",rows:[["2S-49",49,53.5,31,36,null],["2S-51",51,55.5,33,38,null],["2S-54",55,59.5,37,42,null],["2S-58",58,62.5,40,45,null],["2S-60",61,65.5,43,48,null],["2S-62",63,67.5,45,50,null],["2S-64",65,69.5,47,52,null],["2S-70",71,75.5,53,58,null],["2S-73",74,78.5,56,61,null],["2S-77",78,82.5,60,65,null],["2S-84",84,88.5,67,72,null],["2S-88",88,93.5,71,76,null]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:0,bearings:"",hub:"",fam:"2-3/8\" round tube, straight, brake flanges",shape:"round",tube:2.375,cap:3500,spindle:"1-3/8\" x 1-1/16\" step",note:"Part number follows the track, 1\" less than hub face.",rows:[["3SF-43.5",44.5,49,39,45,null],["3SF-62",63,67.75,45,50,null],["3SF-64",65,69.5,47,52,null],["3SF-69",70,73.75,52,57,null],["3SF-73",74,78.5,56,61,null],["3SF-75.5-3",76.5,81,71,77,null,{"tube": 3, "note": "3\" diameter tube. Part number follows the track, 1\" less than hub face."}],["3SF-76.5",77.5,82,72,76,null],["3SF-79",80,84.5,74.5,80.5,null],["3SF-84",85,89.5,67,72,null],["3SF-86",87,91.5,69,74,null],["3SF-86.5-3",87.5,91.5,69,74,null,{"tube": 3, "note": "3\" diameter tube. Part number follows the track, 1\" less than hub face."}],["3SF-88",89,92.5,71,76,null],["3SF-88-3",89,93.5,71,76,null,{"tube": 3, "note": "3\" diameter tube. Part number follows the track, 1\" less than hub face."}],["3SF-91.5",92.5,97,87,93,null],["3SF-92",93,97.5,87.5,93.5,null],["3SF-94",95,99.5,77,82,null],["3SF-94-3",95,99.5,77,82,null,{"tube": 3, "note": "3\" diameter tube. Part number follows the track, 1\" less than hub face."}],["3SF-96",97,101.5,79,84,null],["3SF-96-3",97,101.5,79,84,null,{"tube": 3, "note": "3\" diameter tube. Part number follows the track, 1\" less than hub face."}]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:true,bearings:"",hub:"",fam:"2-3/8\" round tube, drop spindle, brake flanges",shape:"round",tube:2.375,cap:3500,spindle:"1-3/8\" x 1-1/16\" step",note:"Part number follows the track, 1\" less than hub face. Drop amount is not listed on the page.",rows:[["3DF-62",63,67.5,45,50,null],["3DF-66.5",67.5,72,49,54,null],["3DF-73",74,78.5,56,61,null],["3DF-84",85,89.5,67,72,null],["3DF-84-3",85,89.5,67,72,null,{"tube": 3, "note": "3\" diameter tube. Drop amount is not listed on the page."}],["3DF-86",87,91.5,69,74,null],["3DF-88",89,93.5,71,76,null],["3DF-89",90,94.5,72,77,null],["3DF-91",92,96.5,74,79,null],["3DF-93",94,98,76,81,null],["3DF-94",95,99.5,77,82,null],["3DF-96",97,101,79,84,null]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:0,bearings:"",hub:"",fam:"3\" round tube, straight, brake flanges",shape:"round",tube:3,cap:6000,spindle:"1-3/4\" x 1-1/4\" step",note:"Part number follows the track, 1\" less than hub face.",rows:[["6SF-42",43,49,24,28,null],["6SF-56",56,62,38,42,null,{"note": "Track is printed as 55\"."}],["6SF-59",60,66,41,45,null],["6SF-62",63,68.5,44,48,null],["6SF-73",74,80,55,59,null],["6SF-74.75",75.75,81.5,56.75,60.75,null],["6SF-79.5",80.5,84.5,61.5,65.5,null],["6SF-81.25",82.25,88.25,63.25,67.25,null],["6SF-84",85,90.5,66,71,null],["6SF-86",87,92.5,68,72,null],["6SF-88",89,94.5,70,74,null],["6SF-MHU-88",88,93,70,74,null,{"note": "Track and hub face are both printed as 88\"."}],["6SF-91",92,97.5,72,76,null],["6SF-94",95,101.5,76,80,null],["6SF-96",97,102,78,82,null],["6SF-100",101,105.75,88,93,null]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:true,bearings:"",hub:"",fam:"3\" round tube, drop spindle, brake flanges",shape:"round",tube:3,cap:6000,spindle:"1-3/4\" x 1-1/4\" step",note:"Part number follows the track, 1\" less than hub face. Drop amount is not listed on the page.",rows:[["6DF-73",74,80,55,59,null],["6DF-74.5",75.5,82,64,69,null],["6DF-84",85,91,66,71,null],["6DF-86",87,92.75,68,72,null],["6DF-88",89,95,70,74,null],["6DF-94",95,102,76,80,null],["6DF-96",97,103,78,82,null]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:0,bearings:"",hub:"8-91-90M, 8-259-91M or 8-259-91GM marine hub assembly",fam:"2\" square galvanized beam, no flanges",shape:"square",tube:2,cap:2000,spindle:"1-1/16\", EZ-Lube",note:"",rows:[["2S-49SQG",49,54,null,null,null,{"tubeLen": 43}],["2S-53SQG",53,58,null,null,null,{"tubeLen": 46}],["2S-57SQG",57.13,62,null,null,null,{"tubeLen": 51}],["2S-59SQG",59,64,null,null,null,{"tubeLen": 53}],["2S-65SQG",65,70,null,null,null,{"tubeLen": 59}],["2S-69SQG",69,74,null,null,null,{"tubeLen": 63}],["2S-75SQG",75,80,null,null,null,{"tubeLen": 69}],["2S-87SQG",87,92,null,null,null,{"tubeLen": 81}],["2S-89SQG",89,94,null,null,null,{"tubeLen": 83}],["2S-91SQG",91,96,null,null,null,{"tubeLen": 85}]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:0,bearings:"",hub:"HD hubs or disc",fam:"2\" square galvanized beam, straight, brake flanges",shape:"square",tube:2,cap:3500,spindle:"1-3/8\" x 1-1/16\" step, EZ-Lube",note:"Spring center no more than 15\" from track.",rows:[["3SF-73SQG",73,78,null,null,null,{"tubeLen": 65.25}],["3SF-75SQG",75,80,null,null,null,{"tubeLen": 67.25}],["3SF-77SQG",77,82,null,null,null,{"tubeLen": 69.25}],["3SF-81.25SQG",81.25,86.25,null,null,null,{"tubeLen": 73.5}],["3SF-85SQG",85,90,null,null,null,{"tubeLen": 77.25}],["3SF-87SQG",87,92,null,null,null,{"tubeLen": 79.25}],["3SF-91SQG",91,96,null,null,null,{"tubeLen": 83.25}]]},
+ {sup:"R.H. Scales",brand:"Dexter",page:2,drop:true,bearings:"",hub:"HD hubs or disc",fam:"2\" square galvanized beam, drop spindle, brake flanges",shape:"square",tube:2,cap:3500,spindle:"1-3/8\" x 1-1/16\" step, EZ-Lube",note:"Spring center no more than 15\" from track. Drop amount is not listed on the page.",rows:[["3DF-73SQG",73,78,null,null,null,{"tubeLen": 65.25}],["3DF-87SQG",88,92,null,null,null,{"tubeLen": 79.25}]]},
+ {sup:"R.H. Scales",brand:"Tie Down Engineering",page:3,susp:"torsion",drop:0,bearings:"",hub:"",shape:"square",tube:2.5,cap:3750,spindle:"",fam:"2-1/2\" square splined torsion beam, straight, powder coated",note:"Beam only. Add end units 86886 (1-3/8\" x 1-1/16\" spindle, 4-hole brake flange, arm adjusts from 45\u00b0 down to 25\u00b0 up) and one bracket pair: 86883, 86884, 86885 or 86889.",rows:[["86870",83,null,59,67,76.66,{"beam": 74.93}],["86871",85,null,61,69,78.66,{"beam": 76.93}],["86872",87,null,63,71,80.66,{"beam": 78.93}],["86873",89,null,65,73,82.66,{"beam": 80.93}],["86874",91,null,67,75,84.66,{"beam": 82.93}],["86875",93,null,69,77,86.66,{"beam": 84.93}],["86876",95,null,71,79,88.66,{"beam": 86.93}]]},
+ {sup:"R.H. Scales",brand:"Tie Down Engineering",page:3,susp:"torsion",drop:0,bearings:"",hub:"",shape:"square",tube:2.5,cap:3750,spindle:"",fam:"2-1/2\" square splined torsion beam, V-beam, powder coated",note:"Beam only. Add end units 86886 (1-3/8\" x 1-1/16\" spindle, 4-hole brake flange, arm adjusts from 45\u00b0 down to 25\u00b0 up) and one bracket pair: 86883, 86884, 86885 or 86889.",rows:[["86877",85,null,61,69,78.66,{"beam": 76.93}],["86878",87,null,63,71,80.66,{"beam": 78.93}],["86879",89,null,65,73,82.66,{"beam": 80.93}]]},
+ {sup:"R.H. Scales",brand:"",page:3,susp:"torsion",drop:0,bearings:"",hub:"",shape:"square",tube:2,cap:2500,spindle:"",fam:"2\" square galvanized torsion beam, 45\u00b0 down",note:"For Load Rite ramp and tandem trailers.",rows:[["46277A",74,null,62,62,null]]}
+];
+const PARTS=[];
+PART_FAMS.forEach(f=>f.rows.forEach(r=>PARTS.push(Object.assign({sup:f.sup,page:f.page,fam:f.fam,shape:f.shape,tube:f.tube,cap:f.cap,drop:f.drop,spindle:f.spindle,bearings:f.bearings,hub:f.hub,note:f.note,kits:'',susp:f.susp||'spring',brand:f.brand||'',tubeLen:null,beam:null},{pn:r[0],hf:r[1],oal:r[2],scLo:r[3],scHi:r[4],flange:r[5]==null?null:r[5]},r[6]||{}))));
+const CAPCLASS={2500:'3.5k',3750:'3.5k',2000:'2k',2200:'2k',3500:'3.5k',5200:'5.2k',6000:'6k',7000:'7k'};
+function matchParts(inp){
+  if(inp.hf==null)return [];
+  const out=[];
+  PARTS.forEach(p=>{
+    const d=Math.abs(p.hf-inp.hf); if(d>1)return;
+    if(p.susp!==(inp.susp||'spring'))return;
+    if(inp.shape&&p.shape!==inp.shape)return;
+    if(inp.spindle&&((p.drop>0)!==(inp.spindle==='drop')))return;
+    if(inp.tube!=null&&Math.min(...[].concat(p.tube).map(t=>Math.abs(t-inp.tube)))>0.3)return;
+    if(inp.classIds&&inp.classIds.length&&!inp.classIds.includes(CAPCLASS[p.cap]))return;
+    const sc=inp.sc!=null&&p.scLo!=null?(inp.sc>=p.scLo-0.5&&inp.sc<=p.scHi+0.5):null;
+    out.push({p,d,sc});
+  });
+  return out.sort((a,b)=>(a.sc===false)-(b.sc===false)||a.d-b.d||a.p.cap-b.p.cap).slice(0,8);
+}
+/*PARTS-END*/
+
+
+const $=id=>document.getElementById(id);
+const el=(tag,props,kids)=>{const e=document.createElement(tag);if(props)for(const k in props){if(k==='text')e.textContent=props[k];else if(k==='cls')e.className=props[k];else e.setAttribute(k,props[k])}(kids||[]).forEach(k=>e.append(k));return e};
+
+/* ---------- state ---------- */
+const PICKS=[
+ {key:'susp',label:'Suspension',opts:[['spring','Leaf spring'],['torsion','Torsion']]},
+ {key:'shape',label:'Tube shape',opts:[['round','Round'],['square','Square']]},
+ {key:'spindle',label:'Spindle',opts:[['straight','Straight'],['drop','Drop']]},
+ {key:'lugs',label:'Lugs and bolt circle',opts:LUGS},
+ {key:'brake',label:'Brakes',opts:[['idler','None (idler)'],['electric','Electric'],['hyd','Hydraulic drum'],['disc','Disc']]},
+ {key:'drum',label:'Drum diameter, if it has drums',opts:[[7,'7"'],[10,'10"'],[12,'12"'],[12.25,'12-1/4"']]}
+];
+const EXAMPLE={hf:'89',sc:'74',tube:'2-3/8',susp:'spring',shape:'round',spindle:'straight',lugs:'5on4.5',brake:'electric',drum:10,label:'',notes:''};
+let state=Object.assign({},EXAMPLE), currentId=null, isExample=true;
+
+function buildPicks(){
+  const root=$('picks');root.textContent='';
+  PICKS.forEach(p=>{
+    const chips=el('div',{cls:'chips',role:'group','aria-label':p.label});
+    p.opts.forEach(o=>{
+      const b=el('button',{type:'button',text:o[1],'aria-pressed':String(state[p.key]===o[0])});
+      b.addEventListener('click',()=>{leaveExample();state[p.key]=state[p.key]===o[0]?null:o[0];buildPicks();recompute()});
+      chips.append(b);
+    });
+    root.append(el('div',{cls:'pick'},[el('span',{text:p.label}),chips]));
+  });
+  $('lblSC').textContent=state.susp==='torsion'?'Bracket to bracket, outside (in)':'Spring center (in)';
+}
+function readInputs(){state.hf=$('inHF').value;state.sc=$('inSC').value;state.tube=$('inTube').value;state.label=$('inLabel').value;state.notes=$('inNotes').value}
+function writeInputs(){$('inHF').value=state.hf||'';$('inSC').value=state.sc||'';$('inTube').value=state.tube||'';$('inLabel').value=state.label||'';$('inNotes').value=state.notes||''}
+
+/* ---------- result ---------- */
+let lastParts='';
+const inq=x=>(Math.abs(x*4-Math.round(x*4))<1e-6?fmtIn(x,4):x.toFixed(2))+'"';
+function renderParts(r){
+  const box=$('parts');box.textContent='';lastParts='';
+  box.append(el('h3',{text:'Matching part numbers'}));
+  const hf=parseIn(state.hf);
+  if(hf==null){box.append(el('p',{cls:'note',text:'Enter a hub face measurement to match catalog part numbers.'}));return}
+  const ids=r&&r.status==='ok'&&!r.conflict?r.cands.map(c=>c.id):null;
+  const m=matchParts({hf,sc:parseIn(state.sc),tube:parseIn(state.tube),shape:state.shape,spindle:state.spindle,susp:state.susp,classIds:ids});
+  if(!m.length){box.append(el('p',{cls:'note',text:'No catalog axle is within 1" of this hub face with these picks. The catalog holds '+PARTS.length+' axles from Franklin and R.H. Scales so far.'}));return}
+  lastParts=m.slice(0,3).map(x=>x.p.sup+' '+x.p.pn).join(', ');
+  m.forEach(x=>{
+    const p=x.p;
+    const pill=x.d<=0.26?el('span',{cls:'pill high',text:'Hub face matches'}):el('span',{cls:'pill medium',text:'Hub face off by '+inq(x.d)});
+    const sc=p.scLo==null?'Variable, set where the springs mount':(p.scLo===p.scHi?inq(p.scLo):inq(p.scLo)+' to '+inq(p.scHi))+(x.sc===true?' (yours fits)':x.sc===false?' (yours is outside this)':'');
+    const dl=el('dl',{cls:'parts'});
+    [['Hub face',inq(p.hf)],[p.susp==='torsion'?'Outside bracket':'Spring center',sc],['Overall length',p.oal==null?'':inq(p.oal)+' approx.'],['Tube length',p.tubeLen==null?'':inq(p.tubeLen)],['Beam length',p.beam==null?'':inq(p.beam)],['Flange to flange',p.flange==null?'':inq(p.flange)+' approx.'],['Spindle',p.spindle],['Bearings',p.bearings],['Hub or drum',p.hub],['Sold in kits',p.kits]]
+      .forEach(a=>{if(a[1])dl.append(el('dt',{text:a[0]}),el('dd',{text:a[1]}))});
+    box.append(el('div',{cls:'part'},[
+      el('div',{cls:'row'},[el('h4',{text:p.sup+' '+p.pn}),pill]),
+      el('p',{text:(p.brand?p.brand+' · ':'')+p.cap.toLocaleString('en-US')+' lb · '+p.fam+(p.drop&&!/drop/.test(p.fam)?', '+p.drop+'" drop':'')}),
+      dl,
+      p.note?el('p',{cls:'note',text:p.note}):''
+    ]));
+  });
+  box.append(el('p',{cls:'note',text:'From the Franklin Trailer Parts and R.H. Scales catalogs. Specs and part numbers only. Axles within 1" of your hub face are listed because a photo measurement can be off by up to half an inch.'}));
+}
+function buildCatalog(){
+  const root=$('catalog');
+  PART_FAMS.forEach(f=>{
+    const t=el('table');
+    const head=el('tr');['Part #','Hub face','Spring center','Overall','Flange to flange','Notes'].forEach(h=>head.append(el('th',{text:h})));
+    t.append(el('thead',null,[head]));
+    const tb=el('tbody');
+    f.rows.forEach(r=>{const x=r[6]||{};const tr=el('tr');
+      [r[0],inq(r[1]),r[3]==null?'Variable':r[3]===r[4]?inq(r[3]):inq(r[3])+' to '+inq(r[4]),r[2]==null?'':inq(r[2]),r[5]==null?'':inq(r[5]),[x.tubeLen?'tube length '+inq(x.tubeLen):'',x.beam?'beam length '+inq(x.beam):'',x.spindle?x.spindle+' spindle':'',x.bearings?'bearing '+x.bearings:'',x.hub||'',x.note||'',x.kits?'Kits: '+x.kits:''].filter(Boolean).join('. ')].forEach(v=>tr.append(el('td',{text:v})));
+      tb.append(tr)});
+    t.append(tb);
+    const info=[f.susp==='torsion'?'Torsion: the spring center column is the outside bracket range':'',f.spindle?'Spindle: '+f.spindle:'',f.bearings?'Bearings: '+f.bearings:'',f.hub?'Hub or drum: '+f.hub:'',f.note].filter(Boolean).join(' · ');
+    root.append(el('details',null,[
+      el('summary',{text:f.sup+(f.brand?' ('+f.brand+')':'')+' · '+f.cap.toLocaleString('en-US')+' lb · '+f.fam+' ('+f.rows.length+', p. '+f.page+')'}),
+      info?el('p',{cls:'note',text:info}):'',
+      el('div',{cls:'tablewrap'},[t])
+    ]));
+  });
+}
+
+const PICKTXT=(key,v)=>{const p=PICKS.find(x=>x.key===key);const o=p&&p.opts.find(o=>o[0]===v);return o?o[1]:''};
+function specLine(c){
+  const hf=parseIn(state.hf),sc=parseIn(state.sc),parts=[];
+  parts.push((c?c.label+' ':'')+(state.susp==='torsion'?'torsion axle':'leaf spring axle'));
+  if(state.spindle)parts.push(state.spindle==='drop'?'drop spindle':'straight spindle');
+  if(hf)parts.push(fmtIn(hf,4)+'" hub face');
+  if(sc)parts.push(fmtIn(sc,4)+'" '+(state.susp==='torsion'?'outside brackets':'spring center'));
+  if(state.lugs)parts.push(lugTxt(state.lugs));
+  if(state.brake)parts.push(state.brake==='idler'?'idler hubs':PICKTXT('brake',state.brake).toLowerCase()+' brakes'+(c&&state.brake!=='disc'?' '+c.brake:''));
+  return parts.join(', ');
+}
+function recompute(){
+  readInputs();
+  const tube=parseIn(state.tube);
+  const r=identify({tube,susp:state.susp,shape:state.shape,lugs:state.lugs,drum:state.drum});
+  const box=$('result');box.textContent='';
+  const sup=$('suppliers');sup.textContent='';
+  renderParts(r);
+  if(r.status==='none'){
+    box.append(el('p',{cls:'cap',text:'Not enough yet'}),el('p',{cls:'note',text:'Give it a tube size, a lug pattern or a drum size and the capacity class appears here.'}));
+    sup.append(el('p',{cls:'note',text:'Supplier matches appear once the axle has a capacity class.'}));
+    return null;
+  }
+  const c=r.cands[0];
+  box.append(el('p',{cls:'cap',text:r.cands.map(x=>x.label).join(' or ')}));
+  const confTxt={high:'High confidence',medium:'Likely, confirm one detail',low:'Low confidence'}[r.conf];
+  box.append(el('div',{cls:'row'},[el('span',{cls:'pill '+r.conf,text:confTxt}),el('span',{cls:'note',text:(state.susp==='torsion'?'Torsion':'Leaf spring')+(state.spindle?', '+state.spindle+' spindle':'')})]));
+  const ul=el('ul',{cls:'why'});
+  r.why.forEach(w=>ul.append(el('li',{cls:w[0]?'':'no',text:w[1]})));
+  if(r.conflict)ul.append(el('li',{cls:'no',text:'The clues disagree. Parts may have been swapped, or a measurement is off. Check the tag and the bearing numbers.'}));
+  if(state.susp==='torsion')ul.append(el('li',{text:'Torsion axles are sized by their tag and hubs, so the tube measurement is not used. Look for the Torflex number on the tube.'}));
+  else if(state.shape==='square')ul.append(el('li',{text:'Square tube sizes do not follow the round-tube chart, so the tube measurement is not used for the capacity class. It is still used to match part numbers.'}));
+  if(r.cands.length>1){
+    const ids=r.cands.map(x=>x.id).join('+');
+    const tell={'5.2k+6k':'Pull the outer bearing to split them: LM67048 usually means 5,200 lb and 15123 usually means 6,000 lb.','3.5k+4.4k':'Pull a hub to split them: L44649 with L68149 is a 3,500 lb axle; LM67048 with L68149 points to 4,400 lb.'}[ids]
+      ||'The tag or the bearing numbers will narrow this down: '+r.cands.map(x=>x.label+' uses '+x.bearings).join('; ')+'.';
+    ul.append(el('li',{text:tell}));
+  } else if(c.id==='7k'&&r.conf!=='high'){
+    ul.append(el('li',{text:'8-lug hubs also fit 5,200 and 6,000 lb axles. A 14125A outer bearing points to 7,000 lb, but Franklin uses 15123 on both its 6,000 and 7,000 lb axles, so check the drum too.'}));
+  }
+  box.append(ul);
+  const dl=el('dl',{cls:'parts'});
+  [['Usual tube',c.tubeTxt+' round'],['Brakes',c.brake],['Bearings',c.bearings],['Brake flange',c.flange],['Dexter name',c.dexter]].forEach(p=>dl.append(el('dt',{text:p[0]}),el('dd',{text:p[1]})));
+  box.append(el('p',{cls:'note',text:'Typical parts for '+c.label+(r.cands.length>1?' (first candidate)':'')}),dl);
+
+  /* suppliers */
+  const line=specLine(c);
+  const hf=parseIn(state.hf);
+  const q=['trailer axle',c.q,hf?Math.round(hf)+' inch hub face':'',state.lugs?lugTxt(state.lugs):'',state.brake&&state.brake!=='idler'?PICKTXT('brake',state.brake).toLowerCase()+' brakes':(state.brake==='idler'?'idler hubs':'')].filter(Boolean).join(' ');
+  sup.append(el('p',{cls:'note',text:'Ask for this axle'}));
+  const spec=el('div',{cls:'spec',id:'specLine',text:line});
+  const copy=el('button',{cls:'small',type:'button',text:'Copy'});
+  copy.addEventListener('click',()=>{
+    const done=()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy',1500)};
+    const sel=()=>{const rg=document.createRange();rg.selectNodeContents(spec);const s=getSelection();s.removeAllRanges();s.addRange(rg);copy.textContent='Selected'};
+    try{navigator.clipboard.writeText(line).then(done,sel)}catch(e){sel()}
+  });
+  sup.append(spec,el('div',{cls:'row'},[copy]));
+  const list=el('div',{cls:'sup'});
+  const rows=[
+   ['etrailer','Search built from these specs',  'https://www.etrailer.com/s.aspx?qry='+encodeURIComponent(q),'Search'],
+   ['Dexter','Look for '+(c.dexter.split(',')[state.susp==='torsion'?1:0]||c.dexter).trim(),'https://dexterindex.com/','Catalog'],
+   ['Lippert','Replacement axles, built to hub face and spring center','https://www.lippert.com/towing-trailering/trailer-parts/wheel-axle/axles','Axles'],
+   ['R.H. Scales','Wholesale distributor. Their part numbers are matched above. Sign in with the shop account to order.','https://rhscales.com/','Site']
+  ];
+  rows.forEach(s=>{
+    const a=el('a',{cls:'btn small',href:s[2],target:'_blank',rel:'noopener',text:s[3]});
+    list.append(el('div',null,[el('div',{cls:'txt'},[el('strong',{text:s[0]}),el('span',{text:s[1]})]),a]));
+  });
+  sup.append(list,el('p',{cls:'note',text:'Links open the supplier. Price and stock are not checked here.'}));
+  return r;
+}
+
+/* ---------- photo measure tool ---------- */
+const REFS=[['10','Printed reference card, 10 in bar'],['24','24 in level'],['36','Yardstick, 36 in'],['48','48 in level'],['custom','Other length']];
+function makeTool(root,cfg){
+  const uid=cfg.id;
+  const pairs=[{key:'ref',label:'Reference',color:'#f5c518',pts:[null,null]}].concat(cfg.pairs.map(p=>Object.assign({pts:[null,null]},p)));
+  let active=pairs[0], src=null, sW=0,sH=0, scale=1, drag=null;
+  root.append(el('h3',{text:cfg.title}),el('p',{cls:'note',text:cfg.hint}));
+  const file=el('input',{type:'file',accept:'image/*',id:uid+'File','aria-label':cfg.title+' photo'});
+  const fb=el('label',{cls:'btn primary filebtn grow',text:'Take or choose photo'});fb.append(file);
+  const refSel=el('select',{id:uid+'Ref','aria-label':'Reference object'});
+  REFS.forEach(r=>refSel.append(el('option',{value:r[0],text:r[1]})));
+  refSel.value=cfg.defaultRef;
+  const refLen=el('input',{type:'number',id:uid+'RefLen',min:'0.1',step:'0.01',placeholder:'inches','aria-label':'Reference length in inches',hidden:''});
+  root.append(el('div',{cls:'row'},[fb]),el('div',{cls:'row'},[refSel,refLen]));
+  const chips=el('div',{cls:'chips pairs',role:'group','aria-label':'What you are marking'});
+  const stage=el('div',{cls:'stage'});
+  const cv=el('canvas',{cls:'main','aria-label':'Photo. Tap the two ends of the selected measurement, then drag to fine-tune.'});
+  const lp=el('canvas',{cls:'loupe',width:'264',height:'264',hidden:''});
+  stage.append(cv,lp);
+  const read=el('div',{cls:'read',role:'status'});
+  const wrapBody=el('div',{cls:'panelbody',hidden:''});
+  wrapBody.style.cssText='flex-direction:column;gap:12px';
+  wrapBody.append(el('p',{cls:'note',text:'Pick what to mark, tap its two ends, then drag a dot to fine-tune. To adjust an earlier measurement, pick it again first. The round magnifier shows what is under your finger.'}),chips,stage,read);
+  root.append(wrapBody);
+  function show(){wrapBody.hidden=false;wrapBody.style.display='flex'}
+  function refInches(){return refSel.value==='custom'?(parseFloat(refLen.value)||null):parseFloat(refSel.value)}
+  function buildChips(){
+    chips.textContent='';
+    pairs.forEach(p=>{
+      const dot=el('i');dot.style.background=p.color;
+      const b=el('button',{type:'button','aria-pressed':String(p===active)},[dot,document.createTextNode(p.label)]);
+      b.addEventListener('click',()=>{active=p;buildChips()});
+      chips.append(b);
+    });
+  }
+  function layout(){
+    if(!src)return;
+    const maxW=stage.clientWidth||320, maxH=Math.max(260,Math.min(520,window.innerHeight*0.6));
+    scale=Math.min(maxW/sW,maxH/sH);
+    const cw=Math.round(sW*scale), ch=Math.round(sH*scale), dpr=window.devicePixelRatio||1;
+    cv.style.width=cw+'px';cv.style.height=ch+'px';cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);
+    draw();
+  }
+  function draw(){
+    if(!src)return;
+    const g=cv.getContext('2d'), k=cv.width/sW;
+    g.setTransform(1,0,0,1,0,0);g.drawImage(src,0,0,cv.width,cv.height);
+    const dpr=window.devicePixelRatio||1;
+    pairs.forEach(p=>{
+      const [a,b]=p.pts;
+      if(a&&b){g.lineWidth=4*dpr;g.strokeStyle='#000';g.beginPath();g.moveTo(a.x*k,a.y*k);g.lineTo(b.x*k,b.y*k);g.stroke();
+        g.lineWidth=2*dpr;g.strokeStyle=p.color;g.stroke()}
+      p.pts.forEach(pt=>{if(!pt)return;g.beginPath();g.arc(pt.x*k,pt.y*k,(p===active?9:7)*dpr,0,7);g.fillStyle=p.color;g.globalAlpha=.35;g.fill();g.globalAlpha=1;
+        g.lineWidth=3*dpr;g.strokeStyle='#000';g.stroke();g.lineWidth=1.5*dpr;g.strokeStyle=p.color;g.stroke();
+        g.beginPath();g.arc(pt.x*k,pt.y*k,1.5*dpr,0,7);g.fillStyle='#fff';g.fill()});
+    });
+    report();
+  }
+  function loupe(pt,ev){
+    lp.hidden=false;
+    const r=cv.getBoundingClientRect();
+    lp.classList.toggle('right',ev.clientX-r.left<160&&ev.clientY-r.top<160);
+    const g=lp.getContext('2d'), size=264, zoom=3, span=132/(scale*zoom);
+    g.fillStyle='#000';g.fillRect(0,0,size,size);
+    g.drawImage(src,pt.x-span/2,pt.y-span/2,span,span,0,0,size,size);
+    g.strokeStyle='#000';g.lineWidth=4;g.beginPath();g.moveTo(size/2,size/2-26);g.lineTo(size/2,size/2+26);g.moveTo(size/2-26,size/2);g.lineTo(size/2+26,size/2);g.stroke();
+    g.strokeStyle='#f5c518';g.lineWidth=2;g.stroke();
+  }
+  function dist(p){return p.pts[0]&&p.pts[1]?Math.hypot(p.pts[0].x-p.pts[1].x,p.pts[0].y-p.pts[1].y):null}
+  function report(){
+    read.textContent='';
+    const rp=dist(pairs[0]), ri=refInches();
+    if(!rp){read.append(el('span',{text:'Mark both ends of the reference first.'}));return}
+    if(!ri){read.append(el('span',{text:'Enter the reference length in inches.'}));return}
+    pairs.slice(1).forEach(p=>{
+      const d=dist(p);
+      if(!d){read.append(el('span',{text:p.label+': not marked yet'}));return}
+      const inches=d*ri/rp;
+      read.append(el('span',{text:p.label+': '+fmtIn(inches,p.den)+'" ('+inches.toFixed(2)+' in)'}));
+      const inp=$(p.target), v=fmtIn(inches,p.den);
+      if(inp.value!==v){inp.value=v;leaveExample();recompute()}
+    });
+    const frac=rp/Math.hypot(sW,sH);
+    if(cfg.warnShortRef&&frac<0.2)read.append(el('span',{cls:'note',text:'The reference is small in this photo, so expect up to about half an inch of error on long measurements. A yardstick or level along the axle tightens it.'}));
+  }
+  function toImg(ev){const r=cv.getBoundingClientRect();return {x:Math.max(0,Math.min(sW,(ev.clientX-r.left)/scale)),y:Math.max(0,Math.min(sH,(ev.clientY-r.top)/scale))}}
+  cv.addEventListener('pointerdown',ev=>{
+    if(!src)return;ev.preventDefault();
+    const p=toImg(ev);let hit=null,best=30/scale;
+    /* only the selected measurement's dots can be grabbed, so nearby dots of another measurement never steal the tap */
+    [active].forEach(pr=>pr.pts.forEach((pt,i)=>{if(!pt)return;const d=Math.hypot(pt.x-p.x,pt.y-p.y);if(d<best){best=d;hit={pr,i}}}));
+    if(!hit){
+      let i=!active.pts[0]?0:!active.pts[1]?1:(Math.hypot(active.pts[0].x-p.x,active.pts[0].y-p.y)<Math.hypot(active.pts[1].x-p.x,active.pts[1].y-p.y)?0:1);
+      active.pts[i]=p;hit={pr:active,i};
+    } else if(hit.pr!==active){active=hit.pr;buildChips()}
+    drag=hit;try{cv.setPointerCapture(ev.pointerId)}catch(e){}
+    draw();loupe(drag.pr.pts[drag.i],ev);
+  });
+  cv.addEventListener('pointermove',ev=>{if(!drag)return;ev.preventDefault();const p=toImg(ev);drag.pr.pts[drag.i]=p;draw();loupe(p,ev)});
+  const end=()=>{if(!drag)return;const pr=drag.pr;drag=null;lp.hidden=true;
+    if(pr.pts[0]&&pr.pts[1]){const nxt=pairs.find(q=>!(q.pts[0]&&q.pts[1]));if(nxt&&pr===active){active=nxt;buildChips()}}};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  refSel.addEventListener('change',()=>{refLen.hidden=refSel.value!=='custom';draw()});
+  refLen.addEventListener('input',draw);
+  file.addEventListener('change',()=>{
+    const f=file.files&&file.files[0];if(!f)return;
+    const img=new Image(), url=URL.createObjectURL(f);
+    img.onload=()=>{
+      const m=2600, k=Math.min(1,m/Math.max(img.naturalWidth,img.naturalHeight));
+      const oc=document.createElement('canvas');oc.width=Math.round(img.naturalWidth*k);oc.height=Math.round(img.naturalHeight*k);
+      oc.getContext('2d').drawImage(img,0,0,oc.width,oc.height);URL.revokeObjectURL(url);
+      src=oc;sW=oc.width;sH=oc.height;pairs.forEach(p=>p.pts=[null,null]);active=pairs[0];
+      show();buildChips();layout();
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);show();read.textContent='That file could not be opened as a photo. Try another one.'};
+    img.src=url;
+  });
+  window.addEventListener('resize',layout);
+  buildChips();
+  return {reset(){src=null;lp.hidden=true;wrapBody.hidden=true;wrapBody.style.display='none';file.value='';pairs.forEach(p=>p.pts=[null,null])}};
+}
+
+/* ---------- records ---------- */
+let db=null, records=[], storeMode='loading';
+const LS='axleid.records';
+function lsRead(){try{return JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){return []}}
+function lsWrite(a){try{localStorage.setItem(LS,JSON.stringify(a));return true}catch(e){return false}}
+function setStoreMsg(){
+  $('storeMsg').textContent={loading:'Loading saved axles…',db:'Saved with this page. Records are private to you until you share the page.',local:window.AXLE_STANDALONE?'Saved on this device only. Use Export now and then to keep a backup.':'Saved in this browser only. They will not appear on another device.',slow:'Saved axles cannot be reached yet. Still trying.',error:'Saved axles are unavailable right now. New records are kept in this browser.'}[storeMode];
+}
+function renderRecords(){
+  setStoreMsg();
+  const root=$('recList');root.textContent='';
+  if(!records.length){
+    if(storeMode!=='loading')root.append(el('div',{cls:'panel'},[el('p',{text:'No saved axles yet.'}),el('p',{cls:'note',text:'Scan an axle and press Save record. It will be listed here with its measurements and capacity class.'})]));
+    return;
+  }
+  records.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).forEach(r=>{
+    const d=new Date(r.createdAt||0);
+    const meta=[r.hf?'HF '+r.hf+'"':'',r.sc?(r.susp==='torsion'?'brackets ':'SC ')+r.sc+'"':'',r.tube?'tube '+r.tube+'"':'',r.lugs?lugTxt(r.lugs):''].filter(Boolean).join(' · ');
+    const open=el('button',{cls:'small',type:'button',text:'Open'});
+    const del=el('button',{cls:'small danger',type:'button',text:'Delete'});
+    const keep=el('button',{cls:'small',type:'button',text:'Keep',hidden:''});
+    open.addEventListener('click',()=>{loadRecord(r);location.hash='scan'});
+    del.addEventListener('click',()=>{
+      if(del.dataset.armed){removeRecord(r.id);return}
+      del.dataset.armed='1';del.textContent='Confirm delete, cannot be undone';keep.hidden=false;
+    });
+    keep.addEventListener('click',()=>{delete del.dataset.armed;del.textContent='Delete';keep.hidden=true});
+    root.append(el('div',{cls:'panel rec'},[
+      el('h3',{text:r.label||'Unlabeled axle'}),
+      el('p',{text:(r.result||'No capacity class')+(r.confidence?' ('+r.confidence+' confidence)':'')}),
+      r.spec?el('p',{cls:'note',text:r.spec}):'',
+      r.parts?el('p',{cls:'meta',text:'Parts: '+r.parts}):'',
+      el('p',{cls:'meta',text:meta}),
+      r.notes?el('p',{cls:'note',text:r.notes}):'',
+      el('p',{cls:'meta',text:isNaN(d)?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}),
+      el('div',{cls:'row'},[open,del,keep])
+    ]));
+  });
+}
+async function saveRecord(){
+  const r=recompute();
+  const id=currentId||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  const prev=records.find(x=>x.id===id);
+  const rec={id,createdAt:prev?prev.createdAt:Date.now(),updatedAt:Date.now(),label:state.label||'',notes:state.notes||'',
+    hf:state.hf||'',sc:state.sc||'',tube:state.tube||'',susp:state.susp||null,shape:state.shape||null,spindle:state.spindle||null,lugs:state.lugs||null,brake:state.brake||null,drum:state.drum||null,
+    result:r&&r.status==='ok'?r.cands.map(c=>c.label).join(' or '):'',confidence:r&&r.conf||'',spec:specLine(r&&r.status==='ok'&&r.cands.length===1?r.cands[0]:null),parts:lastParts};
+  const msg=$('saveMsg');msg.textContent='Saving…';
+  try{
+    if(db&&storeMode!=='error'){await db.collection('records').doc(id).set(rec)}
+    else{const a=lsRead().filter(x=>x.id!==id);a.push(rec);if(!lsWrite(a))throw new Error('ls');records=a;renderRecords()}
+    currentId=id;$('btnSave').textContent='Update record';
+    msg.textContent=prev?'Updated':'Saved';
+  }catch(e){
+    msg.textContent=e&&e.code==='quota_exceeded'?'Storage is full. Delete old records, then save again.':'Could not save. Check your connection and press Save again.';
+  }
+}
+async function removeRecord(id){
+  try{
+    if(db&&storeMode!=='error'&&storeMode!=='local'){await db.collection('records').doc(id).delete()}
+    else{records=lsRead().filter(x=>x.id!==id);lsWrite(records);renderRecords()}
+    if(currentId===id){currentId=null;$('btnSave').textContent='Save record'}
+  }catch(e){$('storeMsg').textContent='Could not delete that record. Try again.'}
+}
+function loadRecord(r){
+  state={hf:r.hf,sc:r.sc,tube:r.tube,susp:r.susp,shape:r.shape,spindle:r.spindle,lugs:r.lugs,brake:r.brake,drum:r.drum,label:r.label,notes:r.notes};
+  currentId=r.id;isExample=false;$('exampleBanner').hidden=true;$('btnSave').textContent='Update record';$('saveMsg').textContent='';
+  writeInputs();buildPicks();recompute();
+}
+function leaveExample(){
+  if(!isExample)return;isExample=false;$('exampleBanner').hidden=true;
+}
+function newScan(){
+  state={hf:'',sc:'',tube:'',susp:'spring',shape:'round',spindle:null,lugs:null,brake:null,drum:null,label:'',notes:''};
+  currentId=null;isExample=false;$('exampleBanner').hidden=true;$('btnSave').textContent='Save record';$('saveMsg').textContent='';
+  tools.forEach(t=>t.reset());writeInputs();buildPicks();recompute();
+}
+async function initStore(){
+  let timer=setTimeout(()=>{if(storeMode==='loading'){storeMode='slow';renderRecords()}},10000);
+  try{db=window.claude&&window.claude.use?await window.claude.use('db'):null}catch(e){db=null}
+  if(!db){clearTimeout(timer);storeMode='local';records=lsRead();renderRecords();return}
+  db.collection('records').onSnapshot(snap=>{
+    if(!snap.metadata.fromCache){clearTimeout(timer)}
+    storeMode=snap.metadata.fromCache&&storeMode==='slow'?'slow':'db';
+    records=snap.docs.map(d=>Object.assign({},d.data(),{id:d.id}));renderRecords();
+  },()=>{clearTimeout(timer);storeMode='error';records=lsRead();renderRecords()});
+}
+
+/* ---------- chart + routing ---------- */
+function buildChart(){
+  const t=$('chart');
+  const head=el('tr');['Capacity','Tube (round)','Lugs','Brakes','Bearings','Dexter name'].forEach(h=>head.append(el('th',{text:h})));
+  t.append(el('thead',null,[head]));
+  const tb=el('tbody');
+  CLASSES.forEach(c=>{const tr=el('tr');[c.range,c.tubeTxt,c.lugs.concat(c.lugsAlt).map(lugTxt).join(', '),c.brake,c.bearings,c.dexter].forEach(v=>tr.append(el('td',{text:v})));tb.append(tr)});
+  t.append(tb);
+}
+function route(){
+  const h=(location.hash||'#scan').slice(1), v=['scan','records','chart'].includes(h)?h:'scan';
+  ['scan','records','chart'].forEach(n=>{$('view-'+n).hidden=n!==v;const a=document.querySelector('[data-nav="'+n+'"]');if(n===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  if(v==='scan')window.dispatchEvent(new Event('resize'));
+}
+
+const tools=[
+  makeTool($('toolWide'),{id:'wide',title:'Photo 1: whole axle',hint:'For hub face and spring center. Lay a yardstick or level on the axle, or use the printed card.',defaultRef:'36',warnShortRef:true,
+    pairs:[{key:'hf',label:'Hub face',color:'#35d0ff',target:'inHF',den:4},{key:'sc',label:'Spring center',color:'#ff5fd2',target:'inSC',den:4}]}),
+  makeTool($('toolTube'),{id:'tube',title:'Photo 2: tube close-up',hint:'For tube size. Hold the printed card against the tube, between the spring seats, and fill the frame.',defaultRef:'10',
+    pairs:[{key:'tube',label:'Tube, edge to edge',color:'#8dff6a',target:'inTube',den:16}]})
+];
+['inHF','inSC','inTube'].forEach(id=>$(id).addEventListener('input',()=>{leaveExample();recompute()}));
+['inLabel','inNotes'].forEach(id=>$(id).addEventListener('input',readInputs));
+$('btnNew').addEventListener('click',newScan);
+$('btnSave').addEventListener('click',saveRecord);
+window.addEventListener('hashchange',route);
+function exportCsv(){
+  const cols=['createdAt','label','result','confidence','parts','hf','sc','tube','susp','shape','spindle','lugs','brake','drum','spec','notes'];
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const lines=[cols.join(',')].concat(records.map(r=>cols.map(c=>q(c==='createdAt'?new Date(r.createdAt||0).toISOString():r[c])).join(',')));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\r\n')],{type:'text/csv'}));a.download='axle-id-records.csv';document.body.append(a);a.click();a.remove();
+}
+if(window.AXLE_STANDALONE){$('cardLink').hidden=false;$('exportRow').hidden=false;$('btnExport').addEventListener('click',exportCsv)}
+writeInputs();buildPicks();recompute();buildChart();buildCatalog();route();renderRecords();initStore();
+</script>
+
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
+</body>
+</html>
