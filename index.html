@@ -104,6 +104,10 @@ dl.parts dt{color:var(--muted)} dl.parts dd{margin:0;font-variant-numeric:tabula
 .sup .txt{flex:1 1 200px;min-width:0}
 
 .panel>h3{font-size:20px}
+.blank{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.blank .txt{flex:1 1 200px;min-width:0}
+.blank .txt strong{display:block;font-size:17px}
+.blank .txt span{color:var(--muted);font-size:14px}
 .part{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
 .part h4{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.1;margin:0}
 #catalog{gap:0}
@@ -165,14 +169,16 @@ th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
   </section>
 
   <section class="step">
-    <h2><b>2</b> Check the numbers</h2>
+    <h2><b>2</b> Enter what you know</h2>
     <div class="panel">
       <div class="fields">
         <label class="f" for="inHF">Hub face (in)<input id="inHF" type="text" inputmode="text" autocomplete="off" placeholder="89"></label>
         <label class="f" for="inSC"><span id="lblSC">Spring center (in)</span><input id="inSC" type="text" inputmode="text" autocomplete="off" placeholder="74"></label>
+        <label class="f" for="inOAL">Overall length, tip to tip (in)<input id="inOAL" type="text" inputmode="text" autocomplete="off" placeholder="93 1/2"></label>
+        <label class="f" for="inFL">Flange to flange (in)<input id="inFL" type="text" inputmode="text" autocomplete="off" placeholder="82 3/4"></label>
         <label class="f" for="inTube">Tube size (in)<input id="inTube" type="text" inputmode="text" autocomplete="off" placeholder="2 3/8"></label>
       </div>
-      <p class="note">Type over anything the photo got wrong. Fractions work: 89 1/4, 2-3/8 or 2.375. Confirm with a tape before ordering.</p>
+      <p class="note">Fill in whatever you have and leave the rest blank. The app narrows the catalog from it and works out the missing numbers. Flange to flange is the outside of one brake flange (backing plate) to the outside of the other. Fractions work: 89 1/4, 2-3/8 or 2.375.</p>
     </div>
   </section>
 
@@ -195,6 +201,7 @@ th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
       <label class="f" for="inNotes">Notes<input id="inNotes" type="text" autocomplete="off" placeholder="Tag numbers, condition, anything odd"></label>
       <div class="row">
         <button class="primary grow" id="btnSave" type="button">Save record</button>
+        <button id="btnNew2" type="button">New scan</button>
         <span class="note" id="saveMsg" role="status"></span>
       </div>
     </div>
@@ -338,20 +345,62 @@ const PART_FAMS=[
 const PARTS=[];
 PART_FAMS.forEach(f=>f.rows.forEach(r=>PARTS.push(Object.assign({sup:f.sup,page:f.page,fam:f.fam,shape:f.shape,tube:f.tube,cap:f.cap,drop:f.drop,spindle:f.spindle,bearings:f.bearings,hub:f.hub,note:f.note,kits:'',susp:f.susp||'spring',brand:f.brand||'',tubeLen:null,beam:null},{pn:r[0],hf:r[1],oal:r[2],scLo:r[3],scHi:r[4],flange:r[5]==null?null:r[5]},r[6]||{}))));
 const CAPCLASS={2500:'3.5k',3750:'3.5k',2000:'2k',2200:'2k',3500:'3.5k',5200:'5.2k',6000:'6k',7000:'7k'};
+const LENS=[['hf','Hub face',1],['oal','Overall length',1.5],['flange','Flange to flange',1]];
+/* parts that fit the picks (suspension, tube, spindle, capacity class), before any length is compared */
+function partPool(inp){
+  return PARTS.filter(p=>p.susp===(inp.susp||'spring')
+    &&(!inp.shape||p.shape===inp.shape)
+    &&(!inp.spindle||((p.drop>0)===(inp.spindle==='drop')))
+    &&(inp.tube==null||Math.min(...[].concat(p.tube).map(t=>Math.abs(t-inp.tube)))<=0.3)
+    &&(!(inp.classIds&&inp.classIds.length)||inp.classIds.includes(CAPCLASS[p.cap])));
+}
+/* any entered measurement narrows the list; a blank one never blocks it */
 function matchParts(inp){
-  if(inp.hf==null)return [];
+  if(inp.hf==null&&inp.oal==null&&inp.flange==null&&inp.sc==null)return [];
   const out=[];
-  PARTS.forEach(p=>{
-    const d=Math.abs(p.hf-inp.hf); if(d>1)return;
-    if(p.susp!==(inp.susp||'spring'))return;
-    if(inp.shape&&p.shape!==inp.shape)return;
-    if(inp.spindle&&((p.drop>0)!==(inp.spindle==='drop')))return;
-    if(inp.tube!=null&&Math.min(...[].concat(p.tube).map(t=>Math.abs(t-inp.tube)))>0.3)return;
-    if(inp.classIds&&inp.classIds.length&&!inp.classIds.includes(CAPCLASS[p.cap]))return;
-    const sc=inp.sc!=null&&p.scLo!=null?(inp.sc>=p.scLo-0.5&&inp.sc<=p.scHi+0.5):null;
-    out.push({p,d,sc});
+  partPool(inp).forEach(p=>{
+    let pts=0,n=0,sum=0,bad=false;const checks={};
+    LENS.forEach(([k,,tol])=>{
+      if(inp[k]==null||p[k]==null)return;
+      const d=Math.abs(p[k]-inp[k]);
+      if(d>tol){bad=true;return}
+      checks[k]=d;n++;sum+=d;pts+=d<=0.26?2:1;
+    });
+    if(bad)return;
+    let sc=null;
+    if(inp.sc!=null&&p.scLo!=null){
+      if(inp.sc<p.scLo-3||inp.sc>p.scHi+3)return;
+      sc=inp.sc>=p.scLo-0.5&&inp.sc<=p.scHi+0.5; if(sc)pts+=1; n++;
+    }
+    if(!n)return;
+    const nk=Object.keys(checks).length;
+    out.push({p,pts,checks,sc,d:nk?sum/nk:0});
   });
-  return out.sort((a,b)=>(a.sc===false)-(b.sc===false)||a.d-b.d||a.p.cap-b.p.cap).slice(0,8);
+  return out.sort((a,b)=>(a.sc===false)-(b.sc===false)||b.pts-a.pts||a.d-b.d||a.p.cap-b.p.cap).slice(0,8);
+}
+const EST_FROM={hf:['flange','oal'],flange:['hf','oal'],oal:['hf','flange']};
+/* no catalog part gives the value: work it out from how similar catalog axles are built */
+function estimateLen(inp,k){
+  const pool=partPool(inp);
+  for(const from of EST_FROM[k]){
+    if(inp[from]==null)continue;
+    const offs=pool.filter(p=>p[k]!=null&&p[from]!=null).map(p=>p[k]-p[from]);
+    if(offs.length<3)continue;
+    return {k,label:LENS.find(l=>l[0]===k)[1],lo:inp[from]+Math.min(...offs),hi:inp[from]+Math.max(...offs),src:'estimate',n:offs.length,from};
+  }
+  return null;
+}
+/* for each blank length: the value from the best matching parts, else an estimate */
+function fillBlanks(inp,m){
+  const out=[];
+  const ok=m.filter(x=>x.sc!==false), top=ok.length?ok.filter(x=>x.pts===ok[0].pts):[];
+  LENS.forEach(([k,label])=>{
+    if(inp[k]!=null)return;
+    const vals=top.map(x=>x.p[k]).filter(v=>v!=null);
+    if(vals.length){out.push({k,label,lo:Math.min(...vals),hi:Math.max(...vals),src:'catalog',n:vals.length,exact:top.every(x=>Object.keys(x.checks).every(c=>x.checks[c]<=0.26))});return}
+    const e=estimateLen(inp,k); if(e)out.push(e);
+  });
+  return out;
 }
 /*PARTS-END*/
 
@@ -368,7 +417,7 @@ const PICKS=[
  {key:'brake',label:'Brakes',opts:[['idler','None (idler)'],['electric','Electric'],['hyd','Hydraulic drum'],['disc','Disc']]},
  {key:'drum',label:'Drum diameter, if it has drums',opts:[[7,'7"'],[10,'10"'],[12,'12"'],[12.25,'12-1/4"']]}
 ];
-const EXAMPLE={hf:'89',sc:'74',tube:'2-3/8',susp:'spring',shape:'round',spindle:'straight',lugs:'5on4.5',brake:'electric',drum:10,label:'',notes:''};
+const EXAMPLE={hf:'89',sc:'74',oal:'',fl:'',tube:'2-3/8',susp:'spring',shape:'round',spindle:'straight',lugs:'5on4.5',brake:'electric',drum:10,label:'',notes:''};
 let state=Object.assign({},EXAMPLE), currentId=null, isExample=true;
 
 function buildPicks(){
@@ -384,27 +433,50 @@ function buildPicks(){
   });
   $('lblSC').textContent=state.susp==='torsion'?'Bracket to bracket, outside (in)':'Spring center (in)';
 }
-function readInputs(){state.hf=$('inHF').value;state.sc=$('inSC').value;state.tube=$('inTube').value;state.label=$('inLabel').value;state.notes=$('inNotes').value}
-function writeInputs(){$('inHF').value=state.hf||'';$('inSC').value=state.sc||'';$('inTube').value=state.tube||'';$('inLabel').value=state.label||'';$('inNotes').value=state.notes||''}
+function readInputs(){state.oal=$('inOAL').value;state.fl=$('inFL').value;state.hf=$('inHF').value;state.sc=$('inSC').value;state.tube=$('inTube').value;state.label=$('inLabel').value;state.notes=$('inNotes').value}
+function writeInputs(){$('inOAL').value=state.oal||'';$('inFL').value=state.fl||'';$('inHF').value=state.hf||'';$('inSC').value=state.sc||'';$('inTube').value=state.tube||'';$('inLabel').value=state.label||'';$('inNotes').value=state.notes||''}
 
 /* ---------- result ---------- */
 let lastParts='';
 const inq=x=>(Math.abs(x*4-Math.round(x*4))<1e-6?fmtIn(x,4):x.toFixed(2))+'"';
+const FIELD={hf:'inHF',oal:'inOAL',flange:'inFL'}, FROMTXT={hf:'hub face',oal:'overall length',flange:'flange to flange'};
 function renderParts(r){
   const box=$('parts');box.textContent='';lastParts='';
-  box.append(el('h3',{text:'Matching part numbers'}));
-  const hf=parseIn(state.hf);
-  if(hf==null){box.append(el('p',{cls:'note',text:'Enter a hub face measurement to match catalog part numbers.'}));return}
   const ids=r&&r.status==='ok'&&!r.conflict?r.cands.map(c=>c.id):null;
-  const m=matchParts({hf,sc:parseIn(state.sc),tube:parseIn(state.tube),shape:state.shape,spindle:state.spindle,susp:state.susp,classIds:ids});
-  if(!m.length){box.append(el('p',{cls:'note',text:'No catalog axle is within 1" of this hub face with these picks. The catalog holds '+PARTS.length+' axles from Franklin and R.H. Scales so far.'}));return}
+  const inp={hf:parseIn(state.hf),oal:parseIn(state.oal),flange:parseIn(state.fl),sc:parseIn(state.sc),tube:parseIn(state.tube),shape:state.shape,spindle:state.spindle,susp:state.susp,classIds:ids};
+  if(inp.hf==null&&inp.oal==null&&inp.flange==null&&inp.sc==null){
+    box.append(el('h3',{text:'Matching part numbers'}),el('p',{cls:'note',text:'Enter at least one measurement: hub face, overall length, flange to flange or spring center. The app narrows the catalog from whatever you have.'}));return}
+  const m=matchParts(inp), blanks=fillBlanks(inp,m);
+  if(blanks.length){
+    box.append(el('h3',{text:'Missing measurements'}));
+    blanks.forEach(b=>{
+      const single=b.hi-b.lo<=0.26, val=single?inq(b.lo):inq(b.lo)+' to '+inq(b.hi);
+      const sure=b.src==='catalog'&&single&&b.exact;
+      const why=b.src==='catalog'?(!b.exact?'From the closest part below, which is a little off from your numbers. Treat it as a lead.':b.n===1?'From the best matching part below.':'From the '+b.n+' best matching parts below.'+(single?'':' Add a measurement or a pick to narrow it.'))
+        :'Worked out from your '+FROMTXT[b.from]+' using '+b.n+' similar catalog axles. Not a catalog match.'+(single?'':' Pick lugs, drum or tube size to narrow it.');
+      const row=el('div',{cls:'blank'},[
+        el('div',{cls:'txt'},[el('strong',{text:b.label+': '+(single?(sure?'likely ':'about '):'')+val}),el('span',{text:why})]),
+        el('span',{cls:'pill '+(sure?'high':'medium'),text:b.src==='catalog'?(b.exact?'From catalog':'Close match'):'Estimate'})]);
+      if(single){
+        const use=el('button',{cls:'small',type:'button',text:'Use '+val});
+        use.addEventListener('click',()=>{$(FIELD[b.k]).value=inq(b.lo).slice(0,-1);leaveExample();recompute()});
+        row.append(use);
+      }
+      box.append(row);
+    });
+  }
+  box.append(el('h3',{text:'Matching part numbers'}));
+  if(!m.length){box.append(el('p',{cls:'note',text:'No catalog axle fits these measurements and picks. If you are unsure of one measurement, clear it and the list will widen. The catalog holds '+PARTS.length+' axles from Franklin and R.H. Scales so far.'}));return}
   lastParts=m.slice(0,3).map(x=>x.p.sup+' '+x.p.pn).join(', ');
   m.forEach(x=>{
-    const p=x.p;
-    const pill=x.d<=0.26?el('span',{cls:'pill high',text:'Hub face matches'}):el('span',{cls:'pill medium',text:'Hub face off by '+inq(x.d)});
+    const p=x.p, ks=Object.keys(x.checks), nIn=ks.length+(x.sc!=null?1:0);
+    const pill=x.sc===false?el('span',{cls:'pill low',text:'Spring center outside range'})
+      :ks.every(k=>x.checks[k]<=0.26)?el('span',{cls:'pill high',text:'Matches '+nIn+' measurement'+(nIn>1?'s':'')})
+      :el('span',{cls:'pill medium',text:'Close match'});
+    const ann=k=>x.checks[k]==null?'':(x.checks[k]<=0.26?' (matches yours)':' (yours is off by '+inq(x.checks[k])+')');
     const sc=p.scLo==null?'Variable, set where the springs mount':(p.scLo===p.scHi?inq(p.scLo):inq(p.scLo)+' to '+inq(p.scHi))+(x.sc===true?' (yours fits)':x.sc===false?' (yours is outside this)':'');
     const dl=el('dl',{cls:'parts'});
-    [['Hub face',inq(p.hf)],[p.susp==='torsion'?'Outside bracket':'Spring center',sc],['Overall length',p.oal==null?'':inq(p.oal)+' approx.'],['Tube length',p.tubeLen==null?'':inq(p.tubeLen)],['Beam length',p.beam==null?'':inq(p.beam)],['Flange to flange',p.flange==null?'':inq(p.flange)+' approx.'],['Spindle',p.spindle],['Bearings',p.bearings],['Hub or drum',p.hub],['Sold in kits',p.kits]]
+    [['Hub face',inq(p.hf)+ann('hf')],[p.susp==='torsion'?'Outside bracket':'Spring center',sc],['Overall length',p.oal==null?'':inq(p.oal)+' approx.'+ann('oal')],['Tube length',p.tubeLen==null?'':inq(p.tubeLen)],['Beam length',p.beam==null?'':inq(p.beam)],['Flange to flange',p.flange==null?'':inq(p.flange)+' approx.'+ann('flange')],['Spindle',p.spindle],['Bearings',p.bearings],['Hub or drum',p.hub],['Sold in kits',p.kits]]
       .forEach(a=>{if(a[1])dl.append(el('dt',{text:a[0]}),el('dd',{text:a[1]}))});
     box.append(el('div',{cls:'part'},[
       el('div',{cls:'row'},[el('h4',{text:p.sup+' '+p.pn}),pill]),
@@ -413,7 +485,7 @@ function renderParts(r){
       p.note?el('p',{cls:'note',text:p.note}):''
     ]));
   });
-  box.append(el('p',{cls:'note',text:'From the Franklin Trailer Parts and R.H. Scales catalogs. Specs and part numbers only. Axles within 1" of your hub face are listed because a photo measurement can be off by up to half an inch.'}));
+  box.append(el('p',{cls:'note',text:'From the Franklin Trailer Parts and R.H. Scales catalogs. Specs and part numbers only. Axles within about 1" of your measurements are listed, most likely first. Confirm with a tape before ordering.'}));
 }
 function buildCatalog(){
   const root=$('catalog');
@@ -647,7 +719,7 @@ function renderRecords(){
   }
   records.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).forEach(r=>{
     const d=new Date(r.createdAt||0);
-    const meta=[r.hf?'HF '+r.hf+'"':'',r.sc?(r.susp==='torsion'?'brackets ':'SC ')+r.sc+'"':'',r.tube?'tube '+r.tube+'"':'',r.lugs?lugTxt(r.lugs):''].filter(Boolean).join(' · ');
+    const meta=[r.hf?'HF '+r.hf+'"':'',r.sc?(r.susp==='torsion'?'brackets ':'SC ')+r.sc+'"':'',r.oal?'overall '+r.oal+'"':'',r.fl?'flange '+r.fl+'"':'',r.tube?'tube '+r.tube+'"':'',r.lugs?lugTxt(r.lugs):''].filter(Boolean).join(' · ');
     const open=el('button',{cls:'small',type:'button',text:'Open'});
     const del=el('button',{cls:'small danger',type:'button',text:'Delete'});
     const keep=el('button',{cls:'small',type:'button',text:'Keep',hidden:''});
@@ -674,7 +746,7 @@ async function saveRecord(){
   const id=currentId||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   const prev=records.find(x=>x.id===id);
   const rec={id,createdAt:prev?prev.createdAt:Date.now(),updatedAt:Date.now(),label:state.label||'',notes:state.notes||'',
-    hf:state.hf||'',sc:state.sc||'',tube:state.tube||'',susp:state.susp||null,shape:state.shape||null,spindle:state.spindle||null,lugs:state.lugs||null,brake:state.brake||null,drum:state.drum||null,
+    hf:state.hf||'',sc:state.sc||'',oal:state.oal||'',fl:state.fl||'',tube:state.tube||'',susp:state.susp||null,shape:state.shape||null,spindle:state.spindle||null,lugs:state.lugs||null,brake:state.brake||null,drum:state.drum||null,
     result:r&&r.status==='ok'?r.cands.map(c=>c.label).join(' or '):'',confidence:r&&r.conf||'',spec:specLine(r&&r.status==='ok'&&r.cands.length===1?r.cands[0]:null),parts:lastParts};
   const msg=$('saveMsg');msg.textContent='Saving…';
   try{
@@ -694,7 +766,7 @@ async function removeRecord(id){
   }catch(e){$('storeMsg').textContent='Could not delete that record. Try again.'}
 }
 function loadRecord(r){
-  state={hf:r.hf,sc:r.sc,tube:r.tube,susp:r.susp,shape:r.shape,spindle:r.spindle,lugs:r.lugs,brake:r.brake,drum:r.drum,label:r.label,notes:r.notes};
+  state={hf:r.hf,sc:r.sc,oal:r.oal||'',fl:r.fl||'',tube:r.tube,susp:r.susp,shape:r.shape,spindle:r.spindle,lugs:r.lugs,brake:r.brake,drum:r.drum,label:r.label,notes:r.notes};
   currentId=r.id;isExample=false;$('exampleBanner').hidden=true;$('btnSave').textContent='Update record';$('saveMsg').textContent='';
   writeInputs();buildPicks();recompute();
 }
@@ -702,7 +774,7 @@ function leaveExample(){
   if(!isExample)return;isExample=false;$('exampleBanner').hidden=true;
 }
 function newScan(){
-  state={hf:'',sc:'',tube:'',susp:'spring',shape:'round',spindle:null,lugs:null,brake:null,drum:null,label:'',notes:''};
+  state={hf:'',sc:'',oal:'',fl:'',tube:'',susp:'spring',shape:'round',spindle:null,lugs:null,brake:null,drum:null,label:'',notes:''};
   currentId=null;isExample=false;$('exampleBanner').hidden=true;$('btnSave').textContent='Save record';$('saveMsg').textContent='';
   tools.forEach(t=>t.reset());writeInputs();buildPicks();recompute();
 }
@@ -738,13 +810,21 @@ const tools=[
   makeTool($('toolTube'),{id:'tube',title:'Photo 2: tube close-up',hint:'For tube size. Hold the printed card against the tube, between the spring seats, and fill the frame.',defaultRef:'10',
     pairs:[{key:'tube',label:'Tube, edge to edge',color:'#8dff6a',target:'inTube',den:16}]})
 ];
-['inHF','inSC','inTube'].forEach(id=>$(id).addEventListener('input',()=>{leaveExample();recompute()}));
+['inHF','inSC','inOAL','inFL','inTube'].forEach(id=>$(id).addEventListener('input',()=>{leaveExample();recompute()}));
 ['inLabel','inNotes'].forEach(id=>$(id).addEventListener('input',readInputs));
 $('btnNew').addEventListener('click',newScan);
+$('btnNew2').addEventListener('click',()=>{newScan();window.scrollTo(0,0)});
 $('btnSave').addEventListener('click',saveRecord);
 window.addEventListener('hashchange',route);
 function exportCsv(){
   const cols=['createdAt','label','result','confidence','parts','hf','sc','tube','susp','shape','spindle','lugs','brake','drum','spec','notes'];
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const lines=[cols.join(',')].concat(records.map(r=>cols.map(c=>q(c==='createdAt'?new Date(r.createdAt||0).toISOString():r[c])).join(',')));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\r\n')],{type:'text/csv'}));a.download='axle-id-records.csv';document.body.append(a);a.click();a.remove();
+}
+if(window.AXLE_STANDALONE){$('cardLink').hidden=false;$('exportRow').hidden=false;$('btnExport').addEventListener('click',exportCsv)}
+function exportCsv(){
+  const cols=['createdAt','label','result','confidence','parts','hf','sc','oal','fl','tube','susp','shape','spindle','lugs','brake','drum','spec','notes'];
   const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const lines=[cols.join(',')].concat(records.map(r=>cols.map(c=>q(c==='createdAt'?new Date(r.createdAt||0).toISOString():r[c])).join(',')));
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\r\n')],{type:'text/csv'}));a.download='axle-id-records.csv';document.body.append(a);a.click();a.remove();
